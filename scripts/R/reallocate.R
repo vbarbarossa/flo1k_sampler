@@ -1,5 +1,7 @@
+# Valerio Barbarosa 29/7/2019
+# reallocation routine is described in Barbarossa et al. 2018 https://www.nature.com/articles/sdata201852
 
-#define function to transform lon, lat in col,row
+#define function to transform lon, lat to col,row
 lonlat2colrow <- function(lon,lat,unit_cell){
   #translate
   Tlon = lon + 180
@@ -30,18 +32,24 @@ colrow2lonlat <- function(col,row,unit_cell){
 ###################################################################################################################################
 
 # core function that scrolls through rows of the table and reallocate the points
-reallocate <- function(i){
-  N_ring = 5
+# takes in input the lonlat table row and number of cells search radius
+reallocate <- function(i,N_ring=5){
   
+  # define side dimension of square with "radius" N_ring
   dim_side = N_ring*2+1
   
+  # convert latlong to cell locations (row,col)
   convert = lonlat2colrow(points[i,"long"],points[i,"lat"],unit_cell)
   ind_col = convert[1]
   ind_row = convert[2]
+  
+  # read reported upstream area
   area = points[i,"area"]
+  # read matrix of area values surrounding the point location
   mat = matrix(ras[(ind_row-N_ring):(ind_row+N_ring),(ind_col-N_ring):(ind_col+N_ring)],
                nrow=dim_side,ncol=dim_side,byrow = TRUE)
   
+  # read areas and calculate euclidean distance at each point location of the surrounding square -----
   ind = N_ring+1
   
   temp_area = numeric(dim_side**2)
@@ -57,19 +65,22 @@ reallocate <- function(i){
     }
   }
   neigh = data.frame(Area = temp_area, Dist = temp_dist)
+  # --------------------------------------------------------------------------------------------------
   
+  # calculate differences and rank
   neigh$diff = abs(area - neigh[,1])
   neigh$diffp = abs(area - neigh[,1])*100/area
   neigh$rank = neigh$diffp + 2*10*neigh$Dist
   neigh$rank[neigh$diffp > 50] <- NA
   mat.assign = matrix(1:dim_side**2,dim_side,dim_side,byrow = TRUE)
   
+  # search for best match
   if((sum(neigh$diff,na.rm = TRUE) != 0) & (min(neigh$diffp,na.rm = TRUE) <= 50)){
     
     best.match = which(neigh$rank == min(neigh$rank,na.rm = TRUE))
     best.match = best.match[which(neigh$Dist[best.match] == min(neigh$Dist[best.match]))]
     
-    # when solution not unique, choose closes cells first
+    # when solution not unique, choose closest cells first
     if(length(best.match) > 1)  best.match = sample(best.match,1)
     
     new_row = which(mat.assign == best.match,arr.ind = TRUE)[1] + (ind_row - ind)
@@ -81,20 +92,12 @@ reallocate <- function(i){
     
   }
   
+  # report missing value if no match was found
   if((sum(neigh$diff,na.rm = TRUE) == 0) | (min(neigh$diffp,na.rm = TRUE) > 50)) {
     
     final = rep(NA,3)
   }
-  
-  
-  # process_bar = rep((nrow(points)/100),100)*1:100
-  # if(i %in% process_bar){
-  #   bar = bar+1
-  #   sink('foreach_monitor.txt',append=TRUE)
-  #   paste0(i," ")
-  #   sink()
-  # }
-  
+
   return(final)
   
 }
