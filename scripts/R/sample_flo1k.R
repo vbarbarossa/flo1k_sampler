@@ -9,7 +9,7 @@
 # make sure the following libraries are available
 library(raster); library(sf); library(foreach)
 
-# input file
+# input file (without the extension)
 xy_coord <- 'infile'
 
 # reallocate points based on upstream area? T/F
