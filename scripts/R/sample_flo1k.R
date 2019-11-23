@@ -116,6 +116,6 @@ for(var.n in 1:length(Qnames)){
 if(!dir.exists('out')) dir.create('out')
 
 # write the output in CSV format
-write.csv(cbind(tab,to.export[[1]],to.export[[2]],to.export[[3]]),
+write.csv(cbind(tab,do.call('cbind',to.export)),
           paste0('out/',xy_coord,'_w_flo1k.csv'))
 
